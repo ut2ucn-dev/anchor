@@ -411,8 +411,8 @@ const V = {
     if(S.deleted) return `<div class="pad center"><div class="okc g">${IC.check}</div><h2 class="vt">Дані видалено</h2><p class="sub">Усе, що застосунок зберіг у цьому браузері, стерто.</p></div>`;
     const c = AN.consent(), code = AN.sessionCode();
     return `<div class="pad">
-      <div class="q"><b>Статистика використання</b><p class="sub">${c === 'accepted' ? 'Увімкнено: знеособлена статистика.' : c === 'necessary' ? 'Вимкнено: лише необхідне.' : 'Ви ще не обрали.'}</p>
-        <div class="yn"><button data-act="consent" data-v="accepted" aria-pressed="${c === 'accepted'}">Прийняти</button><button data-act="consent" data-v="necessary" aria-pressed="${c === 'necessary'}">Лише необхідні</button></div>
+      <div class="q"><b>Статистика використання</b><p class="sub">${c === 'accepted' ? 'Увімкнено: знеособлена статистика.' : c === 'necessary' ? 'Вимкнено: ви не прийняли.' : 'Ви ще не обрали.'}</p>
+        <div class="yn"><button data-act="consent" data-v="accepted" aria-pressed="${c === 'accepted'}"><span>Прийняти<small>лише необхідні для тестування MVP</small></span></button><button data-act="consent" data-v="necessary" aria-pressed="${c === 'necessary'}">Не приймаю</button></div>
         <details><summary class="linkbtn">Що саме збираємо</summary><ul class="sub">${C.CONSENT_DETAILS.map(x => `<li>${esc(x)}</li>`).join('')}</ul></details></div>
       ${code ? `<div class="q"><b>Код вашої сесії</b><div class="inrow"><span class="code grow" id="sessCode">${esc(code)}</span><button class="btn line" data-act="copyCode">Скопіювати</button></div></div>` : ''}
       <p class="sub">Контакт зберігаємо лише за окремою згодою. Номер чи пошта для входу лишаються в цьому браузері.</p>
