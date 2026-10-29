@@ -1,0 +1,9 @@
+{
+  "name": "anchor-mvp",
+  "private": true,
+  "type": "module",
+  "description": "Anchor MVP: static site + Netlify Functions for own analytics",
+  "dependencies": {
+    "@netlify/blobs": "11.1.4"
+  }
+}
