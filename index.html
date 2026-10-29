@@ -9,51 +9,53 @@
 <link rel="stylesheet" href="css/app.css">
 </head>
 <body>
-<div class="stage">
-  <div class="app" id="app">
-    <header class="top" id="top">
-      <button class="logo" id="logo" aria-label="Anchor: показати факт">
-        <svg viewBox="0 0 34 34" aria-hidden="true"><rect x="1" y="4" width="32" height="5" rx="1.5" fill="#F29A1F"/><rect x="3" y="9" width="28" height="22" rx="2" fill="#2D3642"/><rect x="5.5" y="13" width="9" height="16" rx="1" fill="#7FC4CC"/><rect x="19.5" y="13" width="9" height="16" rx="1" fill="#7FC4CC"/><rect x="15.5" y="12" width="3" height="19" fill="#8E96A3"/><circle cx="10" cy="11" r="1.5" fill="#2FD36B"/><circle cx="24" cy="11" r="1.5" fill="#FF4A3F"/></svg>
-        <span>ANCHOR</span>
-      </button>
-      <div class="fact" id="fact" role="status" aria-live="polite" hidden></div>
-      <span class="demo-chip">Демо</span>
-    </header>
-
-    <main class="tabs" id="tabs">
-      <div class="track" id="track">
-        <section class="pane" id="pane-map" aria-label="Карта"></section>
-        <section class="pane" id="pane-bonus" aria-label="Бонуси"></section>
-        <section class="pane" id="pane-settings" aria-label="Налаштування"></section>
-      </div>
-    </main>
-
-    <p class="exp" id="exp" aria-hidden="true"></p>
-    <nav class="nav" id="nav" aria-label="Розділи">
-      <button data-tab="map"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 4v14M15 6v14" stroke="currentColor" stroke-width="2"/></svg><span>Карта</span></button>
-      <button data-tab="bonus"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="8" width="18" height="13" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 8v13M3 12h18M12 8c-2-4-6-4-6-1s6 1 6 1zm0 0c2-4 6-4 6-1s-6 1-6 1z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><span>Бонуси</span></button>
-      <button data-tab="settings"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>Налаштування</span></button>
-    </nav>
-
-    <div class="notif" id="notif" role="status" aria-live="polite"><span class="ni" id="nIc">SMS</span><span><small id="nFrom">Anchor</small><b id="nText"></b></span></div>
-    <div class="toast" id="toast" role="status" aria-live="polite"></div>
-
-    <div class="consent" id="consent" hidden role="dialog" aria-modal="false" aria-labelledby="consentT">
+<div class="stage" id="stage">
+  <div class="device"><div class="app" id="app">
+    <div class="notch"></div>
+    <div class="statusbar"><span><span id="clock">9:41</span> <span class="exp" id="exp" aria-hidden="true"></span></span><span>5G ▮▮▮</span></div>
+    <button class="notif" id="notif" data-act="notifFill" aria-live="polite"><span class="ni" id="nIc">SMS</span><span><small id="nFrom">Anchor</small><p id="nText"></p></span></button>
+    <div class="head" id="head"></div>
+    <div class="view" id="view"></div>
+    <nav class="nav" id="nav" aria-label="Розділи застосунку" hidden></nav>
+    <div class="fact" id="fact" role="status" aria-live="polite" hidden></div>
+    <div class="drawer" id="drawer" hidden></div>
+    <div class="toast" id="toast" role="status"></div>
+    <div class="cbanner" id="consent" hidden role="dialog" aria-modal="false" aria-labelledby="consentT">
       <h2 id="consentT">Статистика використання</h2>
       <p id="consentText"></p>
       <details><summary>Що саме збираємо</summary><ul id="consentList"></ul><p><a href="privacy.html">Політика приватності</a></p></details>
-      <div class="consent-btns"><button class="btn" id="cAccept">Прийняти</button><button class="btn" id="cNecessary">Лише необхідні</button></div>
+      <div class="btns"><button class="btn" id="cAccept">Прийняти</button><button class="btn line" id="cNecessary">Лише необхідні</button></div>
     </div>
+  </div></div>
+</div>
+<button class="tbtn" id="tbtn" data-act="tmenu" aria-expanded="false" aria-controls="tmenu" hidden>Тест ▾</button>
+<div class="tmenu" id="tmenu" hidden role="dialog" aria-label="Меню тестувальника">
+  <div class="pcard">
+    <div class="inrow"><h3 class="grow">Для тестувальника</h3><button class="ghost" data-act="tmenu" aria-label="Закрити меню тестувальника">✕</button></div>
+    <p class="muted">Це меню бачать лише ті, хто відкрив сайт з #test. Варіант можна задати й посиланням: #sA_cB_oA_mB (s — повідомлення, c — заклик, o — пропозиція, m — логотип, p — ціни), канал — #threads, #instagram, #kpi-a, #kpi-b, #qr.</p>
+    <div class="prow"><label>Повідомлення на вітанні</label><div class="seg" data-ab="msg"></div></div>
+    <div class="prow"><label>Заклик до дії</label><div class="seg" data-ab="cta"></div></div>
+    <div class="prow"><label>Пропозиція в бонусах</label><div class="seg" data-ab="offer"></div></div>
+    <div class="prow"><label>Логотип із фактами</label><div class="seg" data-ab="mascot"></div></div>
+    <div class="prow"><label>Ціни</label><div class="seg" data-ab="price"></div></div>
+    <div class="prow"><label>Канал із посилання</label><b id="chNow"></b></div>
+    <div class="prow"><label>Швидкість часу під час паркування</label><div class="seg" id="spdSeg"><button data-act="speed" data-x="1">×1</button><button data-act="speed" data-x="60">×60</button><button data-act="speed" data-x="600">×600</button></div></div>
+    <div class="prow"><label>Код сесії</label><span class="code" id="tCode"></span></div>
   </div>
+  <button class="ghost" data-act="resetAll">Почати як новий відвідувач</button>
+  <button class="ghost" data-act="leaveTest">Вийти з режиму тестувальника</button>
 </div>
 
 <!-- Static copies of the forms so Netlify Forms can detect them at deploy time. The app submits to them with fetch POST "/". -->
 <form name="survey" data-netlify="true" netlify-honeypot="bot-field" hidden>
   <input name="bot-field"><input name="rating"><input name="understood"><input name="would_use">
-  <input name="features"><input name="features_other"><input name="exp_offer"><input name="exp_mascot"><input name="exp_price"><input name="session_code">
+  <input name="features"><input name="features_other"><input name="exp_offer"><input name="exp_mascot"><input name="exp_price"><input name="exp_msg"><input name="exp_cta"><input name="channel"><input name="session_code">
 </form>
 <form name="contact" data-netlify="true" netlify-honeypot="bot-field" hidden>
   <input name="bot-field"><input name="contact"><input name="source"><input name="consent">
+</form>
+<form name="request" data-netlify="true" netlify-honeypot="bot-field" hidden>
+  <input name="bot-field"><input name="district"><input name="place"><input name="vehicle"><input name="charge"><input name="nearest_km">
 </form>
 
 <script src="js/config.js"></script>

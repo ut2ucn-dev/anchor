@@ -9,7 +9,7 @@ function same(a, b) {
   return x.length === y.length && timingSafeEqual(x, y);
 }
 
-const COLS = ["t", "time", "session_id", "event", "exp_offer", "exp_mascot", "exp_price", "props"];
+const COLS = ["t", "time", "session_id", "event", "exp_offer", "exp_mascot", "exp_price", "exp_msg", "exp_cta", "props"];
 const cell = v => { const s = v == null ? "" : String(v); return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
 
 export default async (req) => {
@@ -31,7 +31,7 @@ export default async (req) => {
   }
 
   if (url.searchParams.get("format") === "csv") {
-    const rows = events.map(e => [e.t, new Date(e.t).toISOString(), e.session_id, e.event, e.exp?.offer, e.exp?.mascot, e.exp?.price, JSON.stringify(e.props || {})].map(cell).join(","));
+    const rows = events.map(e => [e.t, new Date(e.t).toISOString(), e.session_id, e.event, e.exp?.offer, e.exp?.mascot, e.exp?.price, e.exp?.msg, e.exp?.cta, JSON.stringify(e.props || {})].map(cell).join(","));
     return new Response("﻿" + [COLS.join(","), ...rows].join("\n"), {
       headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="anchor-events-${since}.csv"`, "Cache-Control": "no-store" },
     });

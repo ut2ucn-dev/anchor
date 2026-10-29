@@ -31,7 +31,7 @@ function cleanEvent(e) {
   const now = Date.now();
   if (!Number.isFinite(t) || t < now - 7 * 864e5 || t > now + 3600e3) return null;
   const exp = e.exp || {};
-  return { t, event: e.event, session_id: e.session_id, exp: { offer: AB(exp.offer), mascot: AB(exp.mascot), price: AB(exp.price) }, props: cleanProps(e.props) };
+  return { t, event: e.event, session_id: e.session_id, exp: { offer: AB(exp.offer), mascot: AB(exp.mascot), price: AB(exp.price), msg: AB(exp.msg), cta: AB(exp.cta) }, props: cleanProps(e.props) };
 }
 
 export default async (req) => {

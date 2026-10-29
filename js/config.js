@@ -42,7 +42,7 @@ window.CONFIG = Object.freeze({
   ANALYTICS_PROVIDER: 'ga4',       // [ЗМІНИТИ] 'ga4' | 'own' | 'none'
   GA4_ID: 'G-3WD1MXLLYK',          // [ЗМІНИТИ] для 'ga4': ідентифікатор потоку виду G-XXXXXXXXXX
   OWN_ENDPOINT: '/.netlify/functions/track',
-  EXPERIMENTS: {offer: true, mascot: true, price: false},
+  EXPERIMENTS: {offer: true, mascot: true, price: false, msg: true, cta: true},   // msg: повідомлення на вітанні, cta: заклик до дії
   CONSENT_TEXT: 'Ми збираємо знеособлену статистику, щоб покращити застосунок: час у застосунку, які функції ви використовуєте, які пропозиції цікавлять, тип пристрою і браузер.',
   CONSENT_DETAILS: [
     'Час у застосунку і перехід між вкладками',

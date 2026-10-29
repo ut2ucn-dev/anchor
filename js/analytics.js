@@ -15,19 +15,22 @@
   if(consent !== 'accepted' && consent !== 'necessary') consent = null;
 
   /* ---------- A/B assignment ---------- */
-  const EXPS = ['offer', 'mascot', 'price'];
-  const LETTER = {offer: 'o', mascot: 'm', price: 'p'};
+  /* offer: bonus offer · mascot: logo animation · price: price level · msg: welcome message · cta: welcome call to action */
+  const EXPS = ['offer', 'mascot', 'price', 'msg', 'cta'];
+  const LETTER = {offer: 'o', mascot: 'm', price: 'p', msg: 's', cta: 'c'};
+  const BY_LETTER = {o: 'offer', m: 'mascot', p: 'price', s: 'msg', c: 'cta'};
+  const CHANNELS = ['threads', 'instagram', 'kpi-a', 'kpi-b', 'qr', 'students', 'couriers', 'direct'];
+  /* #oA_mB, #threads_sB_cA, #test: letters, digits, underscore, dot, dash only */
+  const hashTokens = () => { const h = (location.hash || '').slice(1); return /^[A-Za-z0-9_.-]{1,60}$/.test(h) ? h.split(/[_.]/) : []; };
   function parseHash(){
-    /* #oA_mB or #oA_mB_pA: letters, digits, underscore, dot, dash only */
-    const h = (location.hash || '').slice(1);
-    if(!/^[A-Za-z0-9_.-]{1,40}$/.test(h)) return {};
     const out = {};
-    h.split(/[_.-]/).forEach(part => {
-      const m = /^([omp])([AB])$/.exec(part);
-      if(m) out[{o: 'offer', m: 'mascot', p: 'price'}[m[1]]] = m[2];
+    hashTokens().forEach(part => {
+      const m = /^([ompsc])([AB])$/.exec(part);
+      if(m) out[BY_LETTER[m[1]]] = m[2];
     });
     return out;
   }
+  const channel = hashTokens().find(t => CHANNELS.includes(t.toLowerCase())) || 'direct';
   const forced = parseHash();
   let stored = {};
   if(consent === 'accepted'){ try{ stored = JSON.parse(lsGet(AB_KEY)) || {}; }catch(e){ stored = {}; } }
@@ -38,7 +41,9 @@
   });
   function persistAb(){ if(consent === 'accepted') lsSet(AB_KEY, JSON.stringify(ab)); }
   const expLabel = () => EXPS.filter(k => C.EXPERIMENTS[k]).map(k => LETTER[k] + ab[k]).join(' ');
-  const expParams = () => ({exp_offer: C.EXPERIMENTS.offer ? ab.offer : '-', exp_mascot: C.EXPERIMENTS.mascot ? ab.mascot : '-', exp_price: C.EXPERIMENTS.price ? ab.price : '-'});
+  const expParams = () => { const o = {}; EXPS.forEach(k => { o['exp_' + k] = C.EXPERIMENTS[k] ? ab[k] : '-'; }); o.channel = channel; return o; };
+  /* tester menu: force a variant for this browser */
+  function setAb(k, v){ if(EXPS.includes(k) && (v === 'A' || v === 'B')){ ab[k] = v; persistAb(); } }
 
   /* ---------- journal + counters for the session code ---------- */
   const sessionId = rid(12);
@@ -93,7 +98,7 @@
     if(event === 'booking_confirmed') counters.booked = (props && props.min) || counters.booked;
     if(/^referral_/.test(event)) counters.referral++;
     if(event === 'mascot_fact_shown') counters.facts++;
-    const ev = {t: Date.now(), event, props: cleanProps(props), exp: {offer: ab.offer, mascot: ab.mascot, price: ab.price}, exp_params: expParams()};
+    const ev = {t: Date.now(), event, props: cleanProps(props), exp: Object.assign({}, ab), exp_params: expParams()};
     journal.push({t: ev.t, event, props: ev.props});
     if(journal.length > 500) journal.shift();
     if(C.ANALYTICS_PROVIDER === 'ga4') sendGa4(ev);
@@ -108,7 +113,7 @@
   function startCollecting(){
     persistAb();
     if(C.ANALYTICS_PROVIDER === 'ga4') loadGa4();
-    track('session_start', Object.assign({channel: (location.hash || '').replace('#', '').slice(0, 20) || 'direct'}, device()));
+    track('session_start', Object.assign({channel}, device()));
   }
   function setConsent(v){
     const was = consent;
@@ -128,7 +133,7 @@
 
   window.Anchor = window.Anchor || {};
   Object.assign(window.Anchor, {
-    ab, expLabel, expParams, track, sessionCode, sessionId, seconds,
+    ab, setAb, channel, expLabel, expParams, track, sessionCode, sessionId, seconds,
     consent: () => consent, setConsent, journal: () => journal.slice(),
     forgetAll(){ ['anchor-consent', AB_KEY, 'anchor-app'].forEach(lsDel); consent = null; journal.length = 0; queue.length = 0; },
   });
