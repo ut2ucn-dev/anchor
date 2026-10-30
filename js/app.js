@@ -118,7 +118,7 @@ const minTxt = m => m < 60 ? `${m} хв` : `${Math.floor(m/60)} год${m % 60 ?
    All events go through window.Anchor.track (js/analytics.js): nothing is kept or sent before consent. */
 const sess = {contact:false, ctaYes:null, rating:0, tester:hashParts.includes('test')};
 const NAMES = {auth:'login_done', parked:'parked', picked:'pickup_done', request:'station_requested', contact:'contact_left', ctaAnswer:'cta_prepay_answer'};
-const SCREENS = ['welcome','auth','onboard','map','station','tariff','book','pay','bookings','history','profile','survey','request','mydata','bonus','honest'];
+const SCREENS = ['welcome','auth','onboard','map','nearby','station','tariff','book','pay','bookings','history','profile','survey','request','mydata','bonus','honest'];
 function track(name, props){
   if(SCREENS.includes(name) && !props) return AN.track('screen_view', {screen:name, tester:sess.tester});
   AN.track(NAMES[name] || name, Object.assign({tester:sess.tester}, props || {}));
@@ -279,7 +279,7 @@ const IC2 = {
   info:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg>',
 };
 const TITLES = {mydata:'Приватність і дані', welcome:'', auth:'Вхід', otp:'Код підтвердження', onboard:'Ваш транспорт', pay:'Оплата', history:'Історія', profile:'Профіль', survey:'Анкета', request:'Нова станція', bonus:'Бонуси', honest:'Пропозиція'};
-const MAPLIKE = ['map','station','tariff','book','bookings'];
+const MAPLIKE = ['map','nearby','station','tariff','book','bookings'];
 const MSG = {
   A:{eb:'Безпека', h:'Ваш велосипед під замком біля метро', li:[[IC2.bell,'Охорона'],[IC.lock,'Сталеві двері'],[IC2.cam,'Камера']]},
   B:{eb:'Для всіх', h:'Місце для будь-якого транспорту біля метро', li:[[IC.map,'Будь-який транспорт'],[IC2.plug,'Зарядка'],[IC2.leaf,'Менше авто']]},
@@ -344,7 +344,7 @@ const V = {
       <button class="btn" data-act="onboardDone" ${a.charge == null ? 'disabled' : ''}>Готово</button>
     </div>`;
   },
-  map(){ return mapScreen(); }, station(){ return mapScreen(); }, tariff(){ return mapScreen(); }, book(){ return mapScreen(); }, bookings(){ return mapScreen(); },
+  map(){ return mapScreen(); }, nearby(){ return mapScreen(); }, station(){ return mapScreen(); }, tariff(){ return mapScreen(); }, book(){ return mapScreen(); }, bookings(){ return mapScreen(); },
   pay(){
     const pf = S.payFor || {};
     return `<div class="pad center">
@@ -482,6 +482,7 @@ function payFx(amount, line){
 /* ---- the map screen and its bottom sheet ---- */
 let mapBooted = false, lastSheetKey = '';
 function mapScreen(){
+  const sh = sheetHtml();
   const f = (k, ic, l) => `<button class="chip f" data-act="filter" data-v="${k}" aria-pressed="${S.filter === k}">${ic}${l}</button>`;
   return `<div class="ms${mapBooted ? '' : ' boot'}">${mapSVG()}
     <div class="topbar">
@@ -491,12 +492,13 @@ function mapScreen(){
     </div>
     <div class="filters">${f('charge', IC.bolt.replace('<svg', '<svg width="11" height="13"'), ' Зарядка')}${f('wide', IC.wide.replace('<svg', '<svg width="13" height="13"'), ' Широкий')}<button class="chip f muted" data-act="testInfo">${IC2.info.replace('<svg', '<svg width="13" height="13"')} Тестова версія</button></div>
     <div class="side-fabs"><button class="fab" data-act="pickMe" aria-pressed="${S.picking}" aria-label="Обрати моє місце на мапі">${IC2.locate}</button><button class="fab" data-act="zoom" data-d="1" aria-label="Наблизити">+</button><button class="fab" data-act="zoom" data-d="-1" aria-label="Віддалити">−</button></div>
-    ${S.picking ? '<div class="picking">Торкніться мапи там, де ви зараз</div>' : ''}
-    <div class="bs${S.snap && S.snap !== 'auto' ? ' h-' + S.snap : ''}" id="sheet"><div class="grabber" data-grab role="button" tabindex="0" aria-label="Розгорнути або згорнути картку"><div class="grab"></div></div>${sheetHtml()}</div>
+    ${S.picking ? '<div class="picking">Торкніться мапи там, де ви зараз</div>' : !sh ? '<div class="picking hint">Оберіть станцію на мапі</div>' : ''}
+    ${sh ? `<div class="bs${S.snap && S.snap !== 'auto' ? ' h-' + S.snap : ''}" id="sheet"><div class="grabber" data-grab role="button" tabindex="0" aria-label="Розгорнути або згорнути картку"><div class="grab"></div></div>${sh}</div>` : ''}
   </div>`;
 }
 function sheetHtml(){
   const b = activeBk();
+  if(S.screen === 'nearby') return sheetNearby();
   if(S.screen === 'station') return sheetSlots();
   if(S.screen === 'tariff') return sheetTariff();
   if(S.screen === 'book') return sheetBook();
@@ -504,7 +506,15 @@ function sheetHtml(){
   const last = L.bookings.find(x => x.id === S.bkId && x.status === 'done');
   if(last) return receipt(last);
   if(S.list) return sheetList();
-  return sheetStation();
+  return '';
+}
+/* near the station: the phone looks for the station over Bluetooth first */
+function sheetNearby(){
+  const st = stById(S.stationId);
+  return `${stHead(st, true)}
+    ${S.found ? `<div class="found"><span class="ic-c ok-c">${IC2.ble}</span><div><b>Знайдено: Anchor · ${esc(st.name)}</b><small>${freeCount(st)} вільних слотів · сигнал добрий</small></div></div>`
+      : `<div class="ble"><span>${IC2.ble}</span></div><p class="sub center-t">Пристрої поруч: шукаємо станцію…</p>`}
+    <p class="fine">Демо: Bluetooth імітується</p>`;
 }
 const stHead = (st, back) => `<div class="st-head">${back ? `<button class="fab sm" data-act="back" aria-label="Назад">${IC.back}</button>` : `<span class="mline" style="background:${LINES[st.line].color}"></span>`}
   <div class="nm"><b>${esc(st.name)}</b><small>${esc(st.addr)}</small></div><span class="dist">${distTxt(st)}</span></div>`;
@@ -512,8 +522,7 @@ const stHead = (st, back) => `<div class="st-head">${back ? `<button class="fab 
 const isNear = st => S.mode[st.id] ? S.mode[st.id] === 'near' : distTo(st) <= 500;
 const distTxt = st => S.mode[st.id] ? (isNear(st) ? '30 м' : '1,2 км') : kmTxt(distTo(st));
 function modeSwitch(st){
-  const n = isNear(st), k = 'mode_' + st.id + (n ? 'n' : 'f');
-  if(!S.seen[k]){ S.seen[k] = 1; track(n ? 'mode_near_shown' : 'mode_far_shown', {station:st.id, auto:!S.mode[st.id]}); }
+  const n = isNear(st);
   return `<div class="modesw"><div class="tabs2" role="group" aria-label="Демо: де ви зараз"><button data-act="mode" data-v="near" aria-pressed="${n}">Я біля станції</button><button data-act="mode" data-v="far" aria-pressed="${!n}">Я далеко</button></div><small>Демо: імітація геолокації</small></div>`;
 }
 function sheetStation(){
@@ -542,7 +551,8 @@ function sheetSlots(){
   return `${stHead(st, true)}
     <div class="vrow">${Object.keys(VEH).map(k => `<button class="vmini" data-act="setVeh" data-t="${k}" aria-pressed="${v === k}" aria-label="${VEH[k].name}" title="${VEH[k].name}">${chipVeh(k)}</button>`).join('')}<button class="vmini" data-act="toggleCharge" aria-pressed="${wantCharge()}" aria-label="Потрібна зарядка" title="Потрібна зарядка">${IC2.plug}</button></div>
     <div class="slotrow">${[0,1,2].map(m => `<div class="pair">${sq(m*2)}${sq(m*2+1)}</div>`).join('')}</div>
-    <p class="sub center-t">${hint} · ${isNear(st) ? 'відкриємо через Bluetooth' : 'забронюємо наперед'}</p>`;
+    <p class="sub center-t">${hint} · ${isNear(st) ? 'оплата і відкриття через Bluetooth' : 'бронювання наперед з передоплатою'}</p>
+    ${modeSwitch(st)}`;
 }
 const PAY_METHODS = ['Google Pay', 'Apple Pay', 'Картка'];
 const payMethods = () => `<div class="paym" role="group" aria-label="Спосіб оплати (демо)">${PAY_METHODS.map(l => `<button data-act="method" data-v="${l}" aria-pressed="${S.method === l}">${l}</button>`).join('')}</div>`;
@@ -553,9 +563,11 @@ function sheetTariff(){
     <div class="tcards">${TARIFFS.map(x => `<button class="tc" data-act="setTariff" data-id="${x.id}" aria-pressed="${S.tariff === x.id}"><b>${x.name}</b><span class="p">${priceOf(x.id)} грн</span><small>${x.unit}</small></button>`).join('')}</div>
     ${t.hours ? `<div class="stepper"><span>Години</span><div><button data-act="hours" data-d="-1" aria-label="Менше годин">−</button><b>${S.hours}</b><button data-act="hours" data-d="1" aria-label="Більше годин">+</button></div></div>` : ''}
     <div class="payline"><span>${t.name}${t.hours ? ' · ' + S.hours + ' год' : ''}</span><b>${tariffFull(S.tariff, S.hours)} грн</b></div>
-    <p class="fine">${b && b.prepay ? `Передоплату ${b.prepay} грн зарахуємо при забиранні · ` : ''}Оплата при забиранні · ${C.DEMO_PAY_NOTE}</p>
-    <button class="btn" data-act="openSlot">${IC2.ble.replace('<svg', '<svg width="18" height="18"')} Відкрити слот №${S.slot+1}</button>`;
+    ${b && b.paid ? `<div class="payline"><span>Передоплата броні</span><b>−${b.paid} грн</b></div>` : ''}
+    <p class="fine">Оплата зараз, до відкриття слота. Якщо перетримаєте транспорт, доплату нарахуємо при забиранні · ${C.DEMO_PAY_NOTE}</p>
+    <button class="btn" data-act="payNear">${dueNear() ? `Сплатити ${dueNear()} грн і відкрити` : `${IC2.ble.replace('<svg', '<svg width="18" height="18"')} Відкрити слот №${S.slot+1}`}</button>`;
 }
+const dueNear = () => { const b = activeBk(); return Math.max(0, tariffFull(S.tariff, S.hours) - (b && b.status === 'reserved' ? b.paid || 0 : 0)); };
 function sheetBook(){
   const st = stById(S.stationId), min = S.min, cost = bookingCost(min), pct = prepayPct(min), pre = prepayOf(min), max = prepayOf(C.BOOKING_MAX);
   if(!S.seen['pp' + min]){ S.seen['pp' + min] = 1; track('booking_prepay_shown', {min, pct, uah:pre}); }
@@ -576,8 +588,8 @@ function rideCard(b){
   const st2 = {reserved:['a','Заброньовано'], open:['b','Слот відчинено'], parked:['g','Під замком'], pickupOpen:['b','Видача']}[b.status];
   const head = `<div class="st-head"><span class="pill ${st2[0]}">${st2[1]}</span><div class="nm"><b>${esc(st.name)} · №${b.slot+1}</b><small>${t ? t.name + (t.hours ? ' · ' + b.hours + ' год' : '') : 'Бронь ' + minTxt(b.min)}${b.charge ? ' · ⚡' : ''}</small></div></div>`;
   const wide = S.snap !== 'auto', camOn = S.camOpen || wide, payOn = S.payOpen || wide;
-  const tools = `<div class="iconrow"><button class="ib" data-act="camToggle" aria-pressed="${!!S.camOpen}">${IC2.cam}Камера</button><button class="ib" data-act="pinShow" aria-pressed="${!!S.pinShow}">${IC2.key}${S.pinShow ? `<span class="pinv">${b.pin}</span>` : 'PIN'}</button><button class="ib" data-act="payInfo" aria-pressed="${!!S.payOpen}">${IC2.wallet}<span id="restTxt">${S.payOpen && b.tariff ? restOf(b) + ' грн' : 'Оплата'}</span></button></div>
-    ${payOn ? `<p class="sub center-t">${b.prepay ? `Передоплата ${b.prepay} грн · ` : ''}${b.tariff ? `до сплати ${restOf(b)} грн при забиранні` : C.PREPAY_CREDITED}</p>` : ''}${camOn ? camBlock(b) : ''}`;
+  const tools = `<div class="iconrow"><button class="ib" data-act="camToggle" aria-pressed="${!!S.camOpen}">${IC2.cam}Камера</button><button class="ib" data-act="pinShow" aria-pressed="${!!S.pinShow}">${IC2.key}${S.pinShow ? `<span class="pinv">${b.pin}</span>` : 'PIN'}</button><button class="ib" data-act="payInfo" aria-pressed="${!!S.payOpen}">${IC2.wallet}<span id="restTxt">${S.payOpen ? (b.paid || 0) + ' грн' : 'Оплата'}</span></button></div>
+    ${payOn ? `<p class="sub center-t">Сплачено ${b.paid || 0} грн${b.tariff ? (restOf(b) ? ` · доплата ${restOf(b)} грн при забиранні` : ' · доплати немає') : ' · ' + C.PREPAY_CREDITED}</p>` : ''}${camOn ? camBlock(b) : ''}`;
   if(b.status === 'reserved') return `${head}
     ${ring(resFrac(b), `<small>бронь ще</small><span id="bkLeft">${fmt(b.until - Date.now()).slice(0,5)}</span><small>год : хв</small>`)}
     ${tools}
@@ -647,18 +659,21 @@ function drawer(){
     ${item('logout', IC2.logout, 'Вийти')}
     <p class="fine">Тестова версія · станцій ще немає · ${C.DEMO_PAY_NOTE}</p><p class="fine mono">exp: ${esc(AN.expLabel())}</p></nav>`;
 }
+/* paid time of a parking: hourly tariff = chosen hours, "day" 10 h, "night" 12 h, subscriptions have no limit */
+const planMs = b => { const t = T(b.tariff); return t.hours ? b.hours*3.6e6 : t.planHours ? t.planHours*3.6e6 : null; };
 function costNow(b){
   const t = T(b.tariff), h = b.elapsed/3.6e6, p = priceOf(b.tariff), hr = priceOf('once');
   if(t.hours) return Math.max(b.hours, Math.ceil(h))*p;
-  if(b.tariff === 'day') return p + Math.max(0, Math.ceil(h - 10))*hr;
+  if(t.planHours) return p + Math.max(0, Math.ceil(h - t.planHours))*hr;
   return p;
 }
-const restOf = b => Math.max(0, costNow(b) - (b.prepay || 0));
+const restOf = b => Math.max(0, costNow(b) - (b.paid ?? b.prepay ?? 0));
+const overTxt = b => { const pm = planMs(b); return pm && b.elapsed > pm ? fmt(b.elapsed - pm).slice(0,5) : ''; };
 function tariffInfo(b){
-  const t = T(b.tariff);
-  if(t.hours){ const left = b.hours*3.6e6 - b.elapsed; return left > 0 ? `ще ${fmt(left).slice(0,5)} з ${b.hours} год` : `понад тариф +${costNow(b) - tariffFull(b.tariff, b.hours)} грн`; }
-  if(b.tariff === 'day'){ const left = 10*3.6e6 - b.elapsed; return left > 0 ? `ще ${fmt(left).slice(0,5)} до кінця тарифу` : `понад 10 год: ${priceOf('once')} грн/год`; }
-  return b.tariff === 'night' ? 'до 08:00' : 'у підписці';
+  const pm = planMs(b);
+  if(!pm) return 'у підписці';
+  const left = pm - b.elapsed;
+  return left > 0 ? `оплачено ще ${fmt(left).slice(0,5)}` : `перетримка ${overTxt(b)} · +${restOf(b)} грн`;
 }
 
 /* ================= render ================= */
@@ -666,10 +681,10 @@ function backTarget(){
   const s = S.screen;
   if(s === 'auth') return 'welcome';
   if(s === 'otp') return S.otpFor === 'login' ? 'auth' : S.otpFor === 'book' ? 'book' : 'bookings';
-  if(s === 'station') return 'map';
+  if(s === 'station' || s === 'nearby') return 'map';
   if(s === 'tariff') return activeBk() ? 'bookings' : 'station';
   if(s === 'book') return 'station';
-  if(s === 'pay' && !S.payBusy) return S.payFor && S.payFor.kind === 'book' ? 'book' : 'bookings';
+  if(s === 'pay' && !S.payBusy) return S.payFor && S.payFor.kind === 'book' ? 'book' : S.payFor && S.payFor.kind === 'near' ? 'tariff' : 'bookings';
   if(s === 'history' || s === 'profile' || s === 'bonus') return 'map';
   if(s === 'honest') return S.honestFrom || 'bonus';
   if(s === 'survey' || s === 'request') return S.prevTab || 'map';
@@ -732,10 +747,22 @@ function otpPassed(f){
     const b = activeBk(); if(!b) return;
     const amt = restOf(b);
     if(amt > 0){
-      S.payFor = {kind:'pickup', amount:amt, label:`${T(b.tariff).name}${b.hours ? ' · ' + b.hours + ' год' : ''} · ${fmt(b.elapsed).slice(0,5)}`, note:b.prepay ? `Передоплату ${b.prepay} грн уже враховано` : ''};
-      S.method = S.method || b.method || null; S.payErr = false; go('pay');
+      S.payFor = {kind:'pickup', amount:amt, label:`Доплата за перетримку ${overTxt(b)}`, note:`Сплачено раніше ${b.paid} грн · ${T(b.tariff).name}${b.hours ? ' ' + b.hours + ' год' : ''}`};
+      S.method = S.method || b.method || null; S.payErr = false;
+      track('overtime_charge_shown', {uah:amt, tariff:b.tariff});
+      go('pay');
+      setTimeout(() => notify('info', `Ви перетримали транспорт на ${overTxt(b)}. Доплата: ${amt} грн. Після оплати слот відчиниться.`), 300);
     } else openForPickup(b, 0);
   }
+}
+function startStation(st){
+  S.stationId = st.id; S.slot = null;
+  if(!isNear(st)){ track('mode_far_shown', {station:st.id}); go('station'); return; }
+  track('mode_near_shown', {station:st.id}); track('nearby_scan_started', {station:st.id});
+  S.found = false; go('nearby');
+  const id = st.id;
+  setTimeout(() => { if(S.screen !== 'nearby' || S.stationId !== id) return; S.found = true; sMsg(); track('nearby_found', {station:id}); render(); }, 1400);
+  setTimeout(() => { if(S.screen === 'nearby' && S.stationId === id) go('station'); }, 2400);
 }
 function saveAccount(){ if(L.accountKey){ L.accounts[L.accountKey] = L.account; saveLocal(); } }
 function openForPickup(b, paid){
@@ -756,9 +783,10 @@ function doPay(){
     }
     sOk(); track('payment_done', {kind:pf.kind, method:S.method, uah:pf.amount});
     if(pf.kind === 'pickup'){ openForPickup(activeBk(), pf.amount); return; }
+    if(pf.kind === 'near'){ S.nearPaid = pf.amount; S.screen = 'tariff'; openSlot(); payFx(pf.amount, 'Оплачено'); return; }
     const st = stById(S.stationId), now = Date.now();
     const b = {id:uid('b'), stationId:st.id, slot:S.slot, vehicle:vehicle(), charge:!!chargeFor(st, S.slot), tariff:null, hours:null, plan:null,
-      min:S.min, until:now + S.min*60000, prepay:pf.amount, method:S.method, remote:true, createdAt:now, pin:String(1000 + rnd(9000)), status:'reserved', elapsed:0, battery:34};
+      min:S.min, until:now + S.min*60000, prepay:pf.amount, paid:pf.amount, method:S.method, remote:true, createdAt:now, pin:String(1000 + rnd(9000)), status:'reserved', elapsed:0, battery:34};
     st.slots[S.slot].st = 'booked';
     L.bookings.push(b); saveLocal();
     track('booking_confirmed', {station:st.id, min:b.min, uah:pf.amount, method:S.method});
@@ -776,7 +804,8 @@ function openSlot(){
   setTimeout(() => {
     S.ble = false;
     const st = stById(S.stationId), t = T(S.tariff), res = activeBk();
-    const fields = {status:'open', tariff:S.tariff, hours:t.hours ? S.hours : null, plan:t.hours ? S.hours : t.plan, elapsed:0, battery:34};
+    const fields = {status:'open', tariff:S.tariff, hours:t.hours ? S.hours : null, plan:t.hours ? S.hours : t.plan, elapsed:0, battery:34, method:S.method || (res && res.method), warned30:false, overNotified:false};
+    fields.paid = (res && res.status === 'reserved' ? res.paid || 0 : 0) + (S.nearPaid || 0); S.nearPaid = 0;
     const b = res && res.status === 'reserved' ? Object.assign(res, fields)
       : Object.assign({id:uid('b'), stationId:st.id, slot:S.slot, vehicle:vehicle(), charge:!!chargeFor(st, S.slot), prepay:0, remote:false, createdAt:Date.now(), pin:String(1000 + rnd(9000))}, fields);
     if(b !== res) L.bookings.push(b);
@@ -789,13 +818,13 @@ function openSlot(){
 }
 function finish(b, status){
   b.status = status; b.endedAt = Date.now();
-  if(status === 'done') b.paidTotal = (b.prepay || 0) + (b.rest || 0);
+  if(status === 'done') b.paidTotal = (b.paid || 0) + (b.rest || 0);
   stById(b.stationId).slots[b.slot].st = 'free'; saveLocal();
 }
 
 /* ================= actions ================= */
 const ACT = {
-  back(){ hideNotif(); const t = backTarget(); if(t){ if(S.screen === 'otp'){ S.code = null; S.otp = ''; } go(t); } },
+  back(){ hideNotif(); const t = backTarget(); if(t){ if(S.screen === 'otp'){ S.code = null; S.otp = ''; } if(t === 'map'){ S.stationId = null; S.slot = null; S.found = false; } go(t); } },
   toggleBig(){ S.big = !S.big; L.big = S.big; saveLocal(); render(); },
   toggleVoice(){ S.voice = !S.voice; L.voice = S.voice; saveLocal(); render(); if(S.voice) say('Голосові підказки ввімкнено.'); else { try{ speechSynthesis.cancel(); }catch(e){} } },
   toAuth(){ go('auth'); },
@@ -837,11 +866,14 @@ const ACT = {
   toggleList(){ S.list = !S.list; if(S.screen !== 'map') S.screen = 'map'; render(); },
   zoom(b){ S.zoom = Math.min(ZMAX, Math.max(1, S.zoom*(+b.dataset.d > 0 ? 1.4 : 1/1.4))); render(); },
   pickMe(){ S.picking = !S.picking; render(); },
-  pickStation(b){ if(S.picking) return; S.stationId = b.dataset.id; S.list = false; const st = stById(S.stationId); S.cx = st.x; S.cy = st.y; render(); },
-  openStation(b){
+  pickStation(b){
+    if(S.picking) return;
     if(activeBk()){ toast('У вас уже є активне бронювання'); go('bookings'); return; }
-    S.stationId = b.dataset.id; S.slot = null; go('station');
+    const st = stById(b.dataset.id); S.list = false; S.bkId = null; S.cx = st.x; S.cy = st.y;
+    if(!freeCount(st)){ S.stationId = null; toast(`«${st.name}»: вільних слотів немає`); render(); return; }
+    startStation(st);
   },
+  openStation(b){ ACT.pickStation(b); },
   pickSlot(b){
     const st = stById(S.stationId), k = +b.dataset.k, sl = st.slots[k];
     if(sl.st !== 'free'){ sBad(); toast(sl.st === 'booked' ? `Слот ${k+1} уже заброньовано` : `Слот ${k+1} зайнятий`); return; }
@@ -851,10 +883,15 @@ const ACT = {
     if(isNear(st)){ S.tariff = S.tariff || 'once'; go('tariff'); }
     else { S.min = S.min || 60; track('booking_started', {station:st.id, slot:k + 1}); go('book'); }
   },
-  mode(b){ const st = S.stationId ? stById(S.stationId) : nearest(); S.mode[st.id] = b.dataset.v; render(); },
+  mode(b){ const st = stById(S.stationId); S.mode[st.id] = b.dataset.v; S.slot = null; startStation(st); },
   dur(b){ S.min = +b.dataset.v; track('booking_duration_selected', {min:S.min}); render(); },
   method(b){ S.method = b.dataset.v; S.payErr = false; track('payment_method_selected', {method:S.method}); render(); },
-  openSlot(){ openSlot(); },
+  payNear(){
+    const amt = dueNear(), t = T(S.tariff);
+    if(!amt){ S.nearPaid = 0; openSlot(); return; }
+    S.payFor = {kind:'near', amount:amt, label:`${t.name}${t.hours ? ' · ' + S.hours + ' год' : ''} · слот №${S.slot+1}`, note:'Слот відчиниться одразу після оплати'};
+    S.payErr = false; go('pay');
+  },
   setTariff(b){ S.tariff = b.dataset.id; render(); },
   hours(b){ S.hours = Math.min(12, Math.max(1, S.hours + +b.dataset.d)); render(); },
   toConfirm(){ if(!S.method) return; sendOtp('book'); go('otp'); },
@@ -957,11 +994,25 @@ setInterval(() => {
   const b = activeBk();
   if(b && b.status === 'parked'){
     b.elapsed += d*L.speed;
+    const pm = planMs(b);
+    if(pm && !b.warned30 && pm > 30*60000 && pm - b.elapsed <= 30*60000){
+      b.warned30 = true; saveLocal(); track('time_warning_30', {kind:'parking'});
+      notify('info', `Оплачений час паркування закінчується через 30 хв. Далі доплата ${priceOf('once')} грн/год при забиранні.`); say('Залишилось тридцять хвилин оплаченого часу.');
+    }
+    if(pm && !b.overNotified && b.elapsed >= pm){
+      b.overNotified = true; saveLocal(); track('overtime_started', {tariff:b.tariff});
+      notify('info', `Оплачений час вичерпано. Доплату ${priceOf('once')} грн/год нарахуємо при забиранні.`); render();
+    }
     if(b.charge && b.battery < 100) b.battery = Math.min(100, b.battery + d*L.speed/(3*60000));
     const tm = $('#pkTimer'); if(tm){ tm.textContent = fmt(b.elapsed); $('#pkInfo').textContent = tariffInfo(b); const rt = $('#restTxt'); if(rt && S.payOpen) rt.textContent = restOf(b) + ' грн'; const rv = $('#ringVal'); if(rv) rv.setAttribute('stroke-dashoffset', (RING_C*(1 - parkFrac(b))).toFixed(1)); }
     const cp = $('#chgPct'); if(cp){ cp.textContent = Math.floor(b.battery) + '%'; $('#chgBar').style.width = Math.floor(b.battery) + '%'; }
   }
   if(b && b.status === 'reserved'){
+    if(L.speed > 1) b.until -= d*(L.speed - 1);                     /* tester speed also runs the booking clock */
+    if(!b.warned30 && b.min > 30 && b.until - Date.now() <= 30*60000){
+      b.warned30 = true; saveLocal(); track('time_warning_30', {kind:'booking'});
+      notify('info', `Бронь на «${stById(b.stationId).name}» діє ще 30 хв. Встигніть дійти до станції.`); say('Бронь діє ще тридцять хвилин.');
+    }
     if(Date.now() >= b.until){ finish(b, 'expired'); toast('Час броні минув. Демо: передоплату не повернуто'); render(); }
     else { const bl = $('#bkLeft'); if(bl){ bl.textContent = fmt(b.until - Date.now()).slice(0,5); const rv = $('#ringVal'); if(rv) rv.setAttribute('stroke-dashoffset', (RING_C*(1 - resFrac(b))).toFixed(1)); } }
   }
