@@ -101,7 +101,7 @@ npx netlify-cli deploy --prod        # публікує сайт і функці
 ## Анкета й контакти (Netlify Forms)
 - У `index.html` є приховані статичні форми `survey`, `contact` і `request` (заявка на нову станцію) з `data-netlify="true"` і пасткою для ботів `bot-field`. Це потрібно, бо форму, яку малює JS, Netlify не знаходить при деплої.
 - Застосунок надсилає дані через `fetch POST "/"` з полем `form-name`.
-- `survey` містить приховані поля `exp_offer`, `exp_mascot`, `exp_price`, `exp_msg`, `exp_cta`, `channel` і `session_code`.
+- `survey` містить поле `wishes` (вільний текст «Ваші побажання», до 500 знаків) і приховані поля `exp_offer`, `exp_mascot`, `exp_price`, `exp_msg`, `exp_cta`, `channel` і `session_code`.
 - `contact` містить лише контакт, джерело і позначку згоди. Він не змішується з аналітикою й надсилається тільки з окремою галочкою.
 - Відповіді: у сайті розділ **Forms** → форма → список надсилань. Там же є експорт у CSV і сповіщення на пошту (**Forms → Form notifications** або подібний пункт; **перевірте в документації Netlify**).
 

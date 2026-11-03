@@ -542,3 +542,4 @@ fieldset.q{border:0;margin:0;min-width:0}
 .found b{display:block}.found small{color:var(--muted)}
 .found .ic-c svg{width:22px;height:22px}
 .map .pulse,.map .me,.map .sel-ring{pointer-events:none}
+textarea.field{resize:vertical;min-height:96px;line-height:1.4}

@@ -96,7 +96,7 @@ const S = {
   phoneDraft:'+380 67 123 45 67', mailDraft:'', otp:'', code:null, codeAt:0, tries:3, lockUntil:0, otpFor:null, msg:'', msgCls:'', checking:false,
   stationId:null, slot:null, tariff:'once', hours:2, filter:null, picking:false, zoom:1, list:false, mode:{},
   min:60, method:null, payBusy:false, payErr:false, failedOnce:false, payFor:null, view:null, snap:'auto', bkId:null,
-  survey:{rating:0, understood:null, wouldUse:null, contact:'', features:[], otherOn:false, other:'', sent:false}, req:{district:'', place:'', note:''},
+  survey:{rating:0, understood:null, wouldUse:null, contact:'', features:[], otherOn:false, other:'', wishes:'', sent:false}, req:{district:'', place:'', note:''},
   refOpen:false, shareOpen:false, friendMsg:'', honestSent:false, offerCard:false, seen:{},
   refCode:'ANCHOR-' + Array.from({length:4}, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random()*32)]).join(''),
 };
@@ -402,6 +402,9 @@ const V = {
         <label for="ftO"><input type="checkbox" id="ftO" data-act="featOther" ${f.otherOn ? 'checked' : ''} ${n >= 3 && !f.otherOn ? 'disabled' : ''}>Інше</label>
         ${f.otherOn ? `<input class="field" id="ftOther" value="${esc(f.other)}" maxlength="120" placeholder="Що саме?" aria-label="Інша функція">` : ''}</div>
         <p class="sub">Обрано ${n} з 3</p></fieldset>
+      <div class="q"><label class="ql" for="svWish">Ваші побажання (за бажанням)</label>
+        <textarea class="field" id="svWish" rows="4" maxlength="${WISH_MAX}" placeholder="Що додати, змінити чи прибрати? Що заважало?">${esc(f.wishes)}</textarea>
+        <p class="sub"><span id="svWishN">${f.wishes.length}</span> / ${WISH_MAX} · не пишіть сюди телефон чи пошту: для контакту є окреме поле</p></div>
       ${sess.contact ? '' : `<div class="q"><label class="ql" for="svContact">Контакт для новин (за бажанням)</label><input class="field" id="svContact" value="${esc(f.contact)}" placeholder="Телефон або Telegram" autocomplete="off">${consentBox('svOk')}</div>`}
       <p class="err" id="svErr"></p>
       <button class="btn" data-act="svSend">Надіслати</button>
@@ -644,6 +647,7 @@ function bonusPage(){
       <p class="${S.friendMsg.startsWith('Бонус') ? 'ok' : 'err'}" role="status">${esc(S.friendMsg)}</p><span class="demo">Демо: бонус не нараховується</span></div>
   </div>`;
 }
+const WISH_MAX = 500;
 const FEATURES = ['Мапа на весь екран і меню збоку', 'Режим «поруч / далеко»: відкрити через Bluetooth або забронювати', 'Бронювання до 3 годин із передоплатою', `Реферальна програма (${C.REFERRAL_HOURS} годин за друга)`, `Пакет 100 годин або знижка ${C.FIRST_DISCOUNT_PCT}% на перше паркування`, 'Логотип із фактами', 'Камера слота і резервний PIN'];
 const SCENARIOS = [['main','Основний'],['term','Без застосунку'],['dead','Телефон розрядився'],['power','Відключення світла'],['bug','Збій застосунку'],['theft','Спроба злому'],['cam','Атака на камери']];
 function drawer(){
@@ -703,6 +707,7 @@ function render(){
   const rp = $('#rqPlace'); if(rp) S.req.place = rp.value;
   const rd = $('#rqDist'); if(rd) S.req.district = rd.value;
   const sc = $('#svContact'); if(sc) S.survey.contact = sc.value;
+  const sw2 = $('#svWish'); if(sw2) S.survey.wishes = sw2.value;
   const ae = document.activeElement, fk = ae && ae.closest && ae.closest('#view') && ae.dataset.k;
   const mapLike = MAPLIKE.includes(S.screen);
   $('#head').hidden = mapLike; if(!mapLike) $('#head').innerHTML = header();
@@ -915,9 +920,9 @@ const ACT = {
     if(c) saveContact(c, 'survey');
     const ep = AN.expParams();
     postForm('survey', {rating:f.rating, understood:f.understood, would_use:f.wouldUse, features:f.features.join(','), features_other:f.otherOn ? f.other.slice(0, 120) : '',
-      exp_offer:ep.exp_offer, exp_mascot:ep.exp_mascot, exp_price:ep.exp_price, exp_msg:ep.exp_msg, exp_cta:ep.exp_cta, channel:ep.channel, session_code:AN.sessionCode()}).catch(() => {});
+      exp_offer:ep.exp_offer, exp_mascot:ep.exp_mascot, exp_price:ep.exp_price, exp_msg:ep.exp_msg, exp_cta:ep.exp_cta, channel:ep.channel, wishes:f.wishes.trim().slice(0, WISH_MAX), session_code:AN.sessionCode()}).catch(() => {});
     track('survey', {rating:f.rating, understood:f.understood, would_use:f.wouldUse});
-    track('features_survey_submitted', {features:f.features.join(','), other:f.otherOn});
+    track('features_survey_submitted', {features:f.features.join(','), other:f.otherOn, wishes:!!f.wishes.trim()});
     sess.rating = f.rating; f.sent = true; render();
   },
   toRequest(){ S.prevTab = 'map'; S.req = {district: (STATIONS.length && distTo(nearest()) > 1500) ? '' : '', place:'', sent:false}; go('request'); },
@@ -985,7 +990,10 @@ document.addEventListener('keydown', e => {
   if(t.classList && t.classList.contains('st-pin') && (e.key === 'Enter' || e.key === ' ')){ e.preventDefault(); ACT.pickStation(t); return; }
   if(S.screen === 'otp' && !t.closest('input,textarea,select')){ if(/^[0-9]$/.test(e.key)) press(e.key); else if(e.key === 'Backspace') press('⌫'); }
 });
-document.addEventListener('input', e => { if(e.target.id === 'ftOther') S.survey.other = e.target.value; });
+document.addEventListener('input', e => {
+  if(e.target.id === 'ftOther') S.survey.other = e.target.value;
+  if(e.target.id === 'svWish'){ S.survey.wishes = e.target.value; const n = $('#svWishN'); if(n) n.textContent = e.target.value.length; }
+});
 
 /* ================= clock ================= */
 let last = performance.now();
