@@ -113,7 +113,7 @@
   function startCollecting(){
     persistAb();
     if(C.ANALYTICS_PROVIDER === 'ga4') loadGa4();
-    track('session_start', Object.assign({channel}, device()));
+    track('visit_start', Object.assign({channel}, device()));
   }
   function setConsent(v){
     const was = consent;

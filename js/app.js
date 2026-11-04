@@ -120,7 +120,7 @@ const sess = {contact:false, ctaYes:null, rating:0, tester:hashParts.includes('t
 const NAMES = {auth:'login_done', parked:'parked', picked:'pickup_done', request:'station_requested', contact:'contact_left', ctaAnswer:'cta_prepay_answer'};
 const SCREENS = ['welcome','auth','onboard','map','nearby','station','tariff','book','pay','bookings','history','profile','survey','request','mydata','bonus','honest'];
 function track(name, props){
-  if(SCREENS.includes(name) && !props) return AN.track('screen_view', {screen:name, tester:sess.tester});
+  if(SCREENS.includes(name) && !props) return AN.track('app_screen', {screen:name, tester:sess.tester});
   AN.track(NAMES[name] || name, Object.assign({tester:sess.tester}, props || {}));
 }
 
